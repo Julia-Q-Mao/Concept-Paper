@@ -7,7 +7,7 @@
 # "Navigating the Jungle of Concepts: An Analysis of Emerging Concepts in Biodiversity Financing". 
 #           The paper aims to answering the following two research Questions: 
 #                   - RQ1: Are there systematic differences in the use of concepts across disciplines over time?
-#                   - RQ2: How are the same concepts understood differently across various research discipline groups (and type of literatures)?
+#                   - RQ2: How are the same concepts understood differently across various Research Community (and type of literatures)?
 #                   - RQ3: What are the meaning of these concepts in the current bodies of research?
 
 
@@ -82,7 +82,7 @@ preprocess_data <- function(data) {
     select(abstract, year, journal, author, title, RA) %>%
     mutate(RA1 = str_extract(RA, "^[^,;&-]+"),
            RA1 = str_replace(RA1, "[\\\\-]+$", "")) %>%
-    mutate(RDG = case_when(
+    mutate(RC = case_when(
       str_detect(RA1, "Business") ~ "G1:Business",
       str_detect(RA1, "Arts|Cultural Studies|Development Studies|Geography|International Relations|Literature|Philosophy|Psychology|Urban Studies") ~ "G2:Social Sciences and Humanities",
       str_detect(RA1, "Biodiversity|Environmental Sciences|Life Sciences|Meteorology|Oceanography|Physics|Plant Sciences|Water Resources|Science") ~ "G3:Natural Sciences",
@@ -101,18 +101,18 @@ custom_colors <- c("G1:Business" = "#F8766D", "G2:Social Sciences and Humanities
 # Publications over time by research discipline group
 create_publication_plot <- function(data, title) {
     data %>%
-    group_by(year, RDG) %>%
+    group_by(year, RC) %>%
     summarize(n = n(), .groups = 'drop') %>%
     drop_na() %>%
-    ggplot(aes(y = n, x = year, fill = RDG, group = RDG)) +
+    ggplot(aes(y = n, x = year, fill = RC, group = RC)) +
     geom_area(alpha = 0.6) +
     theme_minimal() +
     scale_fill_manual(values = custom_colors) +
-    labs(title = title, x = "Year", y = "Number of Publications", fill = "Research Discipline Groups")
+    labs(title = title, x = "Year", y = "Number of Publications", fill = "Research Community")
 }
 
 # Create plots for the dataset
-plot_claened_data <- create_publication_plot(sub_cleaned_data01, "Publications over Time by Research Discipline Groups")
+plot_claened_data <- create_publication_plot(sub_cleaned_data01, "Publications over Time by Research Community")
 
 # Display the combined plot
 print(plot_claened_data )
@@ -125,9 +125,9 @@ sub_data_con01 <- preprocess_data(data_con)
 sub_data_nat01 <- preprocess_data(data_nat)
 
 # Create plots for each dataset
-plot_bio <- create_publication_plot(sub_data_bio01, "Publications over Time by Research Discipline Groups_Biodiversity Finance")
-plot_con <- create_publication_plot(sub_data_con01, "Publications over Time by Research Discipline Groups_Conservation Finance")
-plot_nat <- create_publication_plot(sub_data_nat01, "Publications over Time by Research Discipline Groups_Nature Finance")
+plot_bio <- create_publication_plot(sub_data_bio01, "Publications over Time by Research Community_Biodiversity Finance")
+plot_con <- create_publication_plot(sub_data_con01, "Publications over Time by Research Community_Conservation Finance")
+plot_nat <- create_publication_plot(sub_data_nat01, "Publications over Time by Research Community_Nature Finance")
 
 # Combine the plots into one figure
 combined_plot <- plot_bio / plot_con / plot_nat
@@ -141,18 +141,18 @@ print(combined_plot)
 
 # Define function to process text data and prepare documents for STM
 process_and_prepare_stm <- function(data) {
-  processed <- textProcessor(data$abstract, metadata = data %>% select(year, journal, author, title, abstract, RA, RDG))
+  processed <- textProcessor(data$abstract, metadata = data %>% select(year, journal, author, title, abstract, RA, RC))
   out <- prepDocuments(processed$documents, processed$vocab, processed$meta)
   out$meta <- out$meta %>%
     mutate(year = as.numeric(year),
-           RDG = as.factor(RDG))
+           RC = as.factor(RC))
   return(out)
 }
 
 # Define function to fit STM models
 fit_stm_model <- function(docs, vocab, meta, K) {
-  model <- stm(documents = docs, vocab = vocab, K = K, prevalence = ~ year + RDG, max.em.its = 500, data = meta, init.type = "Spectral")
-  prep <- estimateEffect(1:K ~ year + RDG, model, metadata = meta)
+  model <- stm(documents = docs, vocab = vocab, K = K, prevalence = ~ year + RC, max.em.its = 500, data = meta, init.type = "Spectral")
+  prep <- estimateEffect(1:K ~ year + RC, model, metadata = meta)
   labels <- labelTopics(model, n = 10)$prob
   list(model = model, prep = prep, labels = labels)
 }
@@ -167,7 +167,7 @@ plot_effect_estimates <- function(prep, model, labels, title) {
   par(mfrow = c(3, 2), mar = c(4, 4, 2, 1))
   for (i in 1:3) {
     plot(prep, "year", method = "continuous", topics = i, model = model, printlegend = FALSE, xlab = "year", main = paste(labels[i, 1:3], collapse = " "))
-    plot(prep, "RDG", method = "pointestimate", topics = i, model = model, printlegend = FALSE, xlab = "RDG", main = paste(labels[i, 1:3], collapse = " "))
+    plot(prep, "RC", method = "pointestimate", topics = i, model = model, printlegend = FALSE, xlab = "RC", main = paste(labels[i, 1:3], collapse = " "))
   }
   title(main = title, outer = TRUE, line = -1)
 }
@@ -268,7 +268,7 @@ find_save_top_docs <- function(model, texts, data, file_name = "Top30Articles.xl
   
   wb <- createWorkbook()
   for (i in topic_names$number) {
-    df <- data[top_docs[i, ] %>% as.numeric, c("author", "year", "journal", "title", "abstract", "RA", "RDG")]
+    df <- data[top_docs[i, ] %>% as.numeric, c("author", "year", "journal", "title", "abstract", "RA", "RC")]
     sheet_name <- paste(topic_names$name[which(as.numeric(as.character(topic_names$number)) == i)])
     addWorksheet(wb, sheet_name)
     writeData(wb, sheet = sheet_name, df)
@@ -308,10 +308,10 @@ is_not_numeric <- function(word) {
   return(!grepl("^[0-9]+$", word))
 }
 
-# Define the function to process data for a given RDG value
-process_data_for_RDG <- function(data, RDG_value, stop_words) {
+# Define the function to process data for a given RC value
+process_data_for_RC <- function(data, RC_value, stop_words) {
   filtered_data <- data %>% 
-    filter(RDG == RDG_value) %>% 
+    filter(RC == RC_value) %>% 
     select(abstract)
   
 # Tokenize text data
@@ -347,7 +347,7 @@ process_data_for_RDG <- function(data, RDG_value, stop_words) {
   closest_to_nature_finance <- find_closest_words(word_vectors, "nature finance", stop_words)
   
   create_closest_words_df <- function(closest_words, phrase) {
-    data.frame(word = closest_words, rank = 1:length(closest_words), phrase = phrase, RDG = RDG_value)
+    data.frame(word = closest_words, rank = 1:length(closest_words), phrase = phrase, RC = RC_value)
   }
   
   df_biodiversity_finance <- create_closest_words_df(closest_to_biodiversity_finance, "Biodiversity Finance")
@@ -357,7 +357,7 @@ process_data_for_RDG <- function(data, RDG_value, stop_words) {
   bind_rows(df_biodiversity_finance, df_conservation_finance, df_nature_finance)
 }
 
-# Define the function to process the entire dataset without distinguishing RDGs
+# Define the function to process the entire dataset without distinguishing RCs
 process_data_general <- function(data, stop_words) {
   filtered_data <- data %>% 
     select(abstract)
@@ -395,7 +395,7 @@ process_data_general <- function(data, stop_words) {
   closest_to_nature_finance <- find_closest_words(word_vectors, "nature finance", stop_words)
   
   create_closest_words_df <- function(closest_words, phrase) {
-    data.frame(word = closest_words, rank = 1:length(closest_words), phrase = phrase, RDG = "General")
+    data.frame(word = closest_words, rank = 1:length(closest_words), phrase = phrase, RC = "General")
   }
   
   df_biodiversity_finance <- create_closest_words_df(closest_to_biodiversity_finance, "Biodiversity Finance")
@@ -408,11 +408,11 @@ process_data_general <- function(data, stop_words) {
 # List of stop words
 stop_words <- c(stopwords("en"), "an", "a", "for", "on", "in", "of", "to", "at", "the", "by", "and", "also", "but", "will", "however", "based", "can", "may")
 
-# Apply the function to each RDG group
-RDG_values <- c("G1:Business", "G2:Social Sciences and Humanities", "G3:Natural Sciences", "G4:Applied Sciences and Engineering")
-all_closest_words <- lapply(RDG_values, function(RDG) process_data_for_RDG(sub_cleaned_data01, RDG, stop_words))
+# Apply the function to each RC group
+RC_values <- c("G1:Business", "G2:Social Sciences and Humanities", "G3:Natural Sciences", "G4:Applied Sciences and Engineering")
+all_closest_words <- lapply(RC_values, function(RC) process_data_for_RC(sub_cleaned_data01, RC, stop_words))
 
-# Apply the function to the entire dataset without distinguishing RDGs
+# Apply the function to the entire dataset without distinguishing RCs
 general_closest_words <- process_data_general(sub_cleaned_data01, stop_words)
 
 # Combine results
@@ -430,7 +430,7 @@ custom_colors <- c("Biodiversity Finance" = "#1f77b4", "Conservation Finance" = 
 # Plotting the first half of the data
 plot1 <- ggplot(first_half, aes(x = reorder(word, -rank), y = rank, fill = phrase)) +
   geom_bar(stat = "identity") +
-  facet_wrap(~ RDG + phrase, scales = "free_y", ncol = 3) +  # Set ncol to 3 to have 3 columns
+  facet_wrap(~ RC + phrase, scales = "free_y", ncol = 3) +  # Set ncol to 3 to have 3 columns
   coord_flip() +
   scale_fill_manual(values = custom_colors) + 
   labs(title = "Closest Words to the Concepts (G1 and G2)", x = "Words", y = "Rank (Lower is More Similar)") +
@@ -440,7 +440,7 @@ plot1 <- ggplot(first_half, aes(x = reorder(word, -rank), y = rank, fill = phras
 # Plotting the second half of the data
 plot2 <- ggplot(second_half, aes(x = reorder(word, -rank), y = rank, fill = phrase)) +
   geom_bar(stat = "identity") +
-  facet_wrap(~ RDG + phrase, scales = "free_y", ncol = 3) +  # Set ncol to 3 to have 3 columns
+  facet_wrap(~ RC + phrase, scales = "free_y", ncol = 3) +  # Set ncol to 3 to have 3 columns
   coord_flip() +
   scale_fill_manual(values = custom_colors) + 
   labs(title = "Closest Words to the Concepts (G3 and G4)", x = "Words", y = "Rank (Lower is More Similar)") +
