@@ -1,15 +1,12 @@
-# R Analysis for structural topic modelling (STM) and word embedding (WE) analysis of
-# biodiversity finance literature
-# Script author Julia Qian Mao (julia.q.mao@svet.lu.se) & Nils Droste (nils.droste@svet.lu.se) 
+# R Analysis for structural topic modelling (STM) and word embedding (WE) analysis of biodiversity financing-related literature
+
 
 ###------Description--------:  
-#  With the data (Concept Paper_file/Data/Academic_literature/WoS/D_groups), I am exploring the STM and WE for the paper: 
-# "Navigating the Jungle of Concepts: An Analysis of Emerging Concepts in Biodiversity Financing". 
-#           The paper aims to answering the following two research Questions: 
-#                   - RQ1: Are there systematic differences in the use of concepts across disciplines over time?
-#                   - RQ2: How are the same concepts understood differently across various Research Community (and type of literatures)?
-#                   - RQ3: What are the meaning of these concepts in the current bodies of research?
-
+#  With the data (Concept Paper_file/Data/Academic_literature/WoS/D_groups), we applied the STM and WE in data analysis for the paper: Navigating the conceptual jungle: Unpacking biodiversity, conservation,and nature finance". 
+#  The paper aims to answering the following two research Questions: 
+#    RQ1: Are different concepts preferred in different research communities?
+#    RQ2: Which topics underpin these concepts across different research communities, and how have they evolved over time?
+#    RQ3: In what semantic contexts are these concepts used across research communities? 
 
 
 
@@ -23,7 +20,7 @@ lapply(required_packages, library, character.only = TRUE)
 getwd()
 
 # Set working directory
-setwd("/Users/juliamao/Desktop/Concept Paper_file") 
+setwd("/Users/username/Desktop/Concept Paper_file") 
 
 # Load necessary library
 #library(dplyr)
